@@ -27,56 +27,81 @@ class MOTDMod
 
     }
 
+    messageSelector = function(messagesArray,countHistory)
+    {
+        let index = Math.floor(Math.random() * messagesArray.length);
+
+        if( countHistory == true)
+        {
+            while(this.messages.messageHistory.includes(index) == true )
+            {
+                index = Math.floor(Math.random() * messagesArray.length)
+            }
+            this.messages.messageHistory.splice(0,0,index)
+            if(this.messages.messageHistory.length > 7) { this.messages.messageHistory.pop() }
+            this.messages.selectedMessage = messagesArray[ index ]
+
+            return this.messages.selectedMessage;
+        }
+
+        return messagesArray[ index ]
+    }
+
     postDBLoad(container) 
     {
         let LOCALES = container.resolve("DatabaseServer").getTables().locales.global;
         const MENU = container.resolve("DatabaseServer").getTables().locales.menu.en;
+        let lang = Intl.DateTimeFormat().resolvedOptions().locale;
 
-        let message = "";
-
-        if(Intl.DateTimeFormat().resolvedOptions().locale == "ru-RU") //check user language
+        let message;
+        if(this.newday == true)
         {
-            LOCALES = LOCALES.ru;
-            if(this.newday == true)
+            switch(lang)
             {
-                var randomNumber = Math.floor(Math.random() * this.messages.Messages_ru.length);
-                message = this.messages.Messages_ru[randomNumber];
-                this.messages.selectedMessage = message;
-            }
-            else
-            {
-                message = this.messages.selectedMessage;
+                case "ru-RU":
+                    message = this.messageSelector(this.messages.Messages_ru, true)
+                break;
+
+                case "de-DE":
+                    message = this.messageSelector(this.messages.Messages_de,true)
+                break;
+
+                default:
+                    message = this.messageSelector(this.messages.Messages_en, true)
+                break;
             }
         }
-        else
-        {
-            LOCALES = LOCALES.en;
-            if(this.newday == true)
-            {
-                var randomNumber = Math.floor(Math.random() * this.messages.Messages_en.length);
-                message = this.messages.Messages_en[randomNumber];
-                this.messages.selectedMessage = message;
-            }
-            else
-            {
-                message = this.messages.selectedMessage;
-            }
 
+
+        let loadingMessage;
+        switch(lang)
+        {
+            case "ru-RU":
+                loadingMessage = this.messageSelector(this.messages.loadingMessages_en, false) // there is no loading messages in ru for the moment
+                LOCALES = LOCALES.ru;
+            break;
+
+            case "de-DE":
+                loadingMessage = this.messageSelector(this.messages.loadingMessages_de, false)
+                LOCALES = LOCALES.de
+            break;
+
+            default:
+                loadingMessage = this.messageSelector(this.messages.loadingMessages_en, false)
+                LOCALES = LOCALES.en
+            break;
         }
+
 
         //Replaces title of Orange Box with motd
         LOCALES["Attention! This is a Beta version of Escape from Tarkov for testing purposes."] = "Message of the Day!";
-        LOCALES["NDA free warning"] = message; //Replaces the Orange Box's text with the mod
-
-        randomNumber = Math.floor(Math.random() * this.messages.loadingMessages.length); 
-
-        LOCALES["Profile data loading..."] = this.messages.loadingMessages[randomNumber];
-        MENU["Profile data loading..."] = this.messages.loadingMessages[randomNumber];
+        LOCALES["NDA free warning"] = message ?? this.messages.selectedMessage; 
+        LOCALES["Profile data loading..."] = loadingMessage;
+        MENU["Profile data loading..."] = loadingMessage;
 
         fs.writeFileSync("./user/mods/welcomeMessages/messages.json", JSON.stringify(this.messages, null, 4) );
-
-
     }
+
 
 }
 
